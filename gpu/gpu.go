@@ -166,7 +166,8 @@ func GetGPUInfo() GpuInfo {
 
 	var memInfo C.mem_info_t
 	resp := GpuInfo{}
-	if gpuHandles.nvml != nil && (cpuVariant != "" || runtime.GOARCH != "amd64") {
+	disableCuda := os.Getenv("CUDA_VISIBLE_DEVICES") == "-1"
+	if !disableCuda && gpuHandles.nvml != nil && (cpuVariant != "" || runtime.GOARCH != "amd64") {
 		C.nvml_check_vram(*gpuHandles.nvml, &memInfo)
 		if memInfo.err != nil {
 			slog.Info(fmt.Sprintf("[nvidia-ml] error looking up NVML GPU memory: %s", C.GoString(memInfo.err)))
@@ -186,7 +187,7 @@ func GetGPUInfo() GpuInfo {
 				slog.Info(fmt.Sprintf("[nvidia-ml] CUDA GPU is too old. Falling back to CPU mode. Compute Capability detected: %d.%d", cc.major, cc.minor))
 			}
 		}
-	} else if gpuHandles.cudart != nil && (cpuVariant != "" || runtime.GOARCH != "amd64") {
+	} else if !disableCuda && gpuHandles.cudart != nil && (cpuVariant != "" || runtime.GOARCH != "amd64") {
 		C.cudart_check_vram(*gpuHandles.cudart, &memInfo)
 		if memInfo.err != nil {
 			slog.Info(fmt.Sprintf("[cudart] error looking up CUDART GPU memory: %s", C.GoString(memInfo.err)))
